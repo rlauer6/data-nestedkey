@@ -1,6 +1,7 @@
 lib/Data/NestedKey.pm
 t/01-basic.t
 t/01-as_string.t
+t/01-append.t
 Makefile.PL
 MANIFEST
 README.md

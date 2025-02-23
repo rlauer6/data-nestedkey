@@ -64,16 +64,36 @@ package variables:
 
 ## new(\[$hash\_ref\], @kv\_list)
 
-Creates a new Data::NestedKey object. Optionally, an initial hash reference 
-can be provided. Key-value pairs may also be provided for immediate population.
+Creates a new Data::NestedKey object. If no arguments are provided, initializes 
+with an empty structure. Optionally, an initial hash reference can be supplied. 
+Key-value pairs may also be provided for immediate population.
 
 Returns a `Data::NestedKey` object.
 
 ## set(@kv\_list)
 
-Inserts or updates values in the nested structure using dot-separated keys. 
-If a key already exists and holds a scalar, it will be converted into an array 
-that holds both values.
+Inserts, updates, appends, or removes values in the nested structure using dot-separated keys.
+
+- If a key already exists and holds a scalar, assigning a new value will \*\*replace\*\* it.
+- If the \`+\` prefix is used (e.g., \`+key\`), the value will be \*\*appended\*\*:
+
+        $nk->set('foo.bar' => 1);
+        $nk->set('+foo.bar' => 2);
+        $nk->set('+foo.bar' => 3);
+        # foo.bar now contains [1, 2, 3]
+
+- If the \`+\` prefix is used with a hash, it merges keys instead of replacing:
+
+        $nk->set('config' => { key1 => 'val1' });
+        $nk->set('+config' => { key2 => 'val2' });
+        # config now contains { key1 => 'val1', key2 => 'val2' }
+
+- If the \`-\` prefix is used (e.g., \`-key\`), the value is \*\*removed\*\*:
+
+        $nk->set('-foo.bar' => 2);
+        # If foo.bar is an array, it removes element '2'
+        # If foo.bar is a hash, it removes key '2'
+        # Otherwise, it deletes foo.bar entirely
 
 Returns the object itself.
 
@@ -98,6 +118,10 @@ Returns a list of boolean values (1 for exists, 0 for does not exist).
 ## as\_string()
 
 Serializes the nested structure into a string using the specified format.
+
+You can also use the "" to interpolate the object into its serialized
+representation. Set the `$Data::NestedKey::FORAMAT` variable if you
+want to change the default format from JSON to another format.
 
 Returns a string representation of the data.
 

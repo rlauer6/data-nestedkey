@@ -14,7 +14,7 @@ use Scalar::Util qw(reftype);
 use Storable qw(nfreeze);
 use YAML ();  # Load YAML support
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 # Package variables for serialization options
 our $JSON_PRETTY = 1;       # Controls whether JSON output is pretty or compact
@@ -25,7 +25,10 @@ use overload '""' => \&as_string;
 ########################################################################
 sub new {
 ########################################################################
-  my ( $class, $init_data, @kv_list ) = @_;
+  my ( $class, @args ) = @_;
+
+  my $init_data = ref $args[0] ? shift @args : {};
+  my @kv_list   = @args;
 
   # If the first argument is a hash reference, use it; otherwise, start with an empty structure
   my $self = bless { data => _is_hash($init_data) ? $init_data : {} }, $class;
@@ -38,9 +41,10 @@ sub new {
   # Short-circuit if no key-value pairs are provided
   return $self
     if !@kv_list;
+
   # Ensure key-value pairs are valid
   croak 'Must provide key-value pairs'
-    if @kv_list % 2 != 0;
+    if @kv_list && @kv_list % 2 != 0;
 
   # Populate the structure using `set`
   $self->set(@kv_list);
@@ -64,6 +68,8 @@ sub set {
 
   for my $p ( pairs @kv_list ) {
     my ( $key_path, $value ) = @{$p};
+    my $action = $key_path =~ s/^([+-])// ? $1 : q{};
+
     my @keys    = split /[.]/, $key_path;
     my $current = $self->{data};
 
@@ -73,16 +79,40 @@ sub set {
     }
 
     my $final_key = $keys[-1];
-    croak sprintf q{Error: Attempting to replace a hash reference at key '%s' with a scalar value.}, $final_key
-      if _is_hash( $current->{$final_key} );
 
-    if ( _is_array( $current->{$final_key} ) ) {
-      push @{ $current->{$final_key} }, $value;
+    if ( $action eq q{+} ) {
+      if ( _is_array( $current->{$final_key} ) ) {
+        push @{ $current->{$final_key} }, $value;
+      }
+      elsif ( _is_hash( $current->{$final_key} ) && _is_hash($value) ) {
+        %{ $current->{$final_key} } = ( %{ $current->{$final_key} }, %{$value} );
+      }
+      elsif ( _is_hash( $current->{$final_key} ) ) {
+        croak sprintf q{Error: Attempting to merge a non-hash into a hash at key '%s'.}, $final_key;
+      }
+      elsif ( exists $current->{$final_key} ) {
+        $current->{$final_key} = [ $current->{$final_key}, $value ];
+      }
+      else {
+        $current->{$final_key} = [$value];
+      }
     }
-    elsif ( exists $current->{$final_key} ) {
-      $current->{$final_key} = [ $current->{$final_key}, $value ];
+    elsif ( $action eq q{-} ) {
+      if ( _is_array( $current->{$final_key} ) ) {
+        @{ $current->{$final_key} } = grep { $_ ne $value } @{ $current->{$final_key} };
+      }
+      elsif ( _is_hash( $current->{$final_key} ) ) {
+        delete $current->{$final_key}{$value};
+      }
+      else {
+        delete $current->{$final_key};
+      }
     }
     else {
+      croak sprintf q{Error: Attempting to replace a hash reference at key '%s' with a scalar value.},
+        $final_key
+        if _is_hash( $current->{$final_key} ) && !_is_hash($value);
+
       $current->{$final_key} = $value;
     }
   }
@@ -141,7 +171,8 @@ sub delete {
     my @parents;  # Track parent references
 
     for my $key ( @keys[ 0 .. $#keys - 1 ] ) {
-      last unless _is_hash($current) && exists $current->{$key};
+      last if !_is_hash($current) || !exists $current->{$key};
+
       push @parents, [ $current, $key ];  # Store parent reference
       $current = $current->{$key};
     }
@@ -152,7 +183,10 @@ sub delete {
     # Cleanup empty parent hashes
     while (@parents) {
       my ( $parent, $key ) = @{ pop @parents };
-      delete $parent->{$key} if _is_hash( $parent->{$key} ) && !%{ $parent->{$key} };
+
+      if ( _is_hash( $parent->{$key} ) && !%{ $parent->{$key} } ) {
+        delete $parent->{$key};
+      }
     }
   }
 
@@ -187,8 +221,6 @@ sub exists_key {
 }
 
 1;
-
-__END__
 
 __END__
 
@@ -264,16 +296,41 @@ Specifies the serialization format. Supported formats:
 
 =head2 new([$hash_ref], @kv_list)
 
-Creates a new Data::NestedKey object. Optionally, an initial hash reference 
-can be provided. Key-value pairs may also be provided for immediate population.
+Creates a new Data::NestedKey object. If no arguments are provided, initializes 
+with an empty structure. Optionally, an initial hash reference can be supplied. 
+Key-value pairs may also be provided for immediate population.
 
 Returns a C<Data::NestedKey> object.
 
 =head2 set(@kv_list)
 
-Inserts or updates values in the nested structure using dot-separated keys. 
-If a key already exists and holds a scalar, it will be converted into an array 
-that holds both values.
+Inserts, updates, appends, or removes values in the nested structure using dot-separated keys.
+
+=over 4
+
+=item * If a key already exists and holds a scalar, assigning a new value will **replace** it.
+
+=item * If the `+` prefix is used (e.g., `+key`), the value will be **appended**:
+
+    $nk->set('foo.bar' => 1);
+    $nk->set('+foo.bar' => 2);
+    $nk->set('+foo.bar' => 3);
+    # foo.bar now contains [1, 2, 3]
+
+=item * If the `+` prefix is used with a hash, it merges keys instead of replacing:
+
+    $nk->set('config' => { key1 => 'val1' });
+    $nk->set('+config' => { key2 => 'val2' });
+    # config now contains { key1 => 'val1', key2 => 'val2' }
+
+=item * If the `-` prefix is used (e.g., `-key`), the value is **removed**:
+
+    $nk->set('-foo.bar' => 2);
+    # If foo.bar is an array, it removes element '2'
+    # If foo.bar is a hash, it removes key '2'
+    # Otherwise, it deletes foo.bar entirely
+
+=back
 
 Returns the object itself.
 
@@ -298,6 +355,10 @@ Returns a list of boolean values (1 for exists, 0 for does not exist).
 =head2 as_string()
 
 Serializes the nested structure into a string using the specified format.
+
+You can also use the "" to interpolate the object into its serialized
+representation. Set the C<$Data::NestedKey::FORAMAT> variable if you
+want to change the default format from JSON to another format.
 
 Returns a string representation of the data.
 
