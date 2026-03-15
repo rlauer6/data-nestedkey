@@ -120,24 +120,18 @@ Returns a list of boolean values (1 for exists, 0 for does not exist).
 Serializes the nested structure into a string using the specified format.
 
 You can also use the "" to interpolate the object into its serialized
-representation. Set the `$Data::NestedKey::FORAMAT` variable if you
+representation. Set the `$Data::NestedKey::FORMAT` variable if you
 want to change the default format from JSON to another format.
 
 Returns a string representation of the data.
 
-## clear()
-
-Clears all stored data in the object.
-
-Returns the object itself.
-
-# AUTHORS
+# AUTHOR
 
 Rob Lauer <rlauer6@comcast.net>
 
 # SEE ALSO
 
-[Data::Dumper](https://metacpan.org/pod/Data%3A%3ADumper), [JSON](https://metacpan.org/pod/JSON), [YAML](https://metacpan.org/pod/YAML), [Storable](https://metacpan.org/pod/Storable)
+[Data::Dumper](https://metacpan.org/pod/Data%3A%3ADumper), [JSON](https://metacpan.org/pod/JSON), [YAML::XS](https://metacpan.org/pod/YAML%3A%3AXS), [Storable](https://metacpan.org/pod/Storable)
 
 # LICENSE
 
