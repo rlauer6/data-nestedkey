@@ -1,26 +1,28 @@
+---
 project:
   description: Data::NestedKey
   author:
     name: Rob Lauer
-    mailto: rlauer@treasurersbriefcase.com
-pm_module: Data::NestedKey
+    mailto: rclauer@gmail.com
+pm-module: Data::NestedKey
 min-perl-version: 5.010
 dependencies:
   requires: requires
-  test_requires: test-requires
+  test-requires: test-requires
 path:
-  pm_module: lib
+  pm-module: lib
+  exe-files: bin
   tests: t
 extra-files:
   - ChangeLog
   - share:
       - README.md
 resources:
-  homepage: http://github.com/rlauer6/data-nestedkey.git
   bugtracker:
-    web: http://github.com/rlauer6/data-nestedkey/issues
-    mailto: rlauer@treasurersbriefcase.com
+    mailto: rclauer@gmail.com
+    web: https://github.com/rlauer6/Data-NestedKey/issues
+  homepage: https://github.com/rlauer6/Data-NestedKey
   repository:
-    url: git://github.com/rlauer6/data-nestedkey.git
-    web: http://github.com/rlauer6/data-nestedkey.git
-    type: 'git'
+    type: git
+    url: git@github.com:rlauer6/Data-NestedKey.git
+    web: https://github.com/rlauer6/Data-NestedKey

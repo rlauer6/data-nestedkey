@@ -1,3 +1,5 @@
-JSON
-YAML::XS
-List::Util 1.32
+CLI::Simple 2.0.11
+CLI::Simple::Constants 2.0.11
+CLI::Simple::Utils 2.0.11
+JSON 4.10
+YAML::XS v0.904.0
