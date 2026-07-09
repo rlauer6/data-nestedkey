@@ -17,6 +17,8 @@ extra-files:
   - ChangeLog
   - share:
       - README.md
+man-links:
+  - dnk: Data::NestedKey::CLI
 resources:
   bugtracker:
     mailto: rclauer@gmail.com
